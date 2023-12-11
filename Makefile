@@ -1,20 +1,28 @@
 #-----------------------------------------------------------------------------#
 
 VENV_DIR := venv
-ansible-requirements.txt: $(VENV_DIR)/bin/activate
+
+ansible-requirements.txt: | $(VENV_DIR)/bin/activate
 	. $< && pip install wheel
 	. $< && pip install ansible
+	. $< && pip list --outdated --format=freeze | grep -v '^\-e' | \
+	    cut -d = -f 1 | xargs -n1 pip install --upgrade
 	. $< && pip freeze >$@
 
-ansible: ansible-requirements.txt
+$(VENV_DIR)/bin/ansible: ansible-requirements.txt
+	. $(VENV_DIR)/bin/activate && \
+	    pip install -r ansible-requirements.txt
+
+ansible-playbook ansible: $(VENV_DIR)/bin/ansible
 	printf '#!/bin/bash\n' >$@
 	chmod 0755 $@
 	printf 'SCRIPT_DIR="$$(cd "$$(dirname "$$BASH_SOURCE")" && pwd)"\n' >>$@
 	printf 'source "$$SCRIPT_DIR/venv/bin/activate"\n' >>$@
-	printf 'exec ansible "$$@"\n' >>$@
+	printf 'exec $@ "$$@"\n' >>$@
 
 clean::
 	rm -f ansible
+	rm -f ansible-playbook
 
 ansible-shell: SHELL := /bin/bash
 ansible-shell: $(VENV_DIR)/bin/activate

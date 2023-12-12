@@ -23,7 +23,7 @@ $(VENV_DIR)/bin/ansible: requirements.txt $(VENV_DIR)/bin/activate
 	. $(VENV_DIR)/bin/activate && \
 	    pip install -r requirements.txt
 
-ansible-playbook ansible: $(VENV_DIR)/bin/ansible
+ansible-doc ansible-playbook ansible: $(VENV_DIR)/bin/ansible
 	printf '#!/bin/bash\n' >$@
 	chmod 0755 $@
 	printf 'SCRIPT_DIR="$$(cd "$$(dirname "$$BASH_SOURCE")" && pwd)"\n' >>$@
@@ -78,4 +78,4 @@ regen-keys:
 #-----------------------------------------------------------------------------#
 run-wsl_config:
 run-%: %.yml hosts.ini ansible-playbook
-	./ansible-playbook -i $(filter %.ini,$^) $< 
+	./ansible-playbook --ask-become-pass -i $(filter %.ini,$^) $<

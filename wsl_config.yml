@@ -1,6 +1,7 @@
 ---
 - name: WSL Configuration Playbook
   hosts: all
+  become: true
   tasks:
     - name: Configure systemd with WSL-specific patches
       block:
@@ -50,7 +51,6 @@
             name: wsl-keepalive.service
             enabled: yes
             state: started
-            daemon_reload: yes
             masked: no
 
         - name: Disable WSL-incompatible services
@@ -92,6 +92,7 @@
           block:
            - name: Install public host keys
              ansible.builtin.copy:
+               force: false
                src: "ssh_keys/{{item}}.pub"
                dest: /etc/ssh/
                mode: '0644'
@@ -100,6 +101,7 @@
 
            - name: Install private host keys
              ansible.builtin.copy:
+               force: false
                src: "ssh_keys/{{item}}"
                dest: /etc/ssh/
                mode: '0600'
@@ -126,3 +128,9 @@
     - name: reload systemd
       systemd:
         daemon_reload: yes
+
+    - name: restart ssh
+      ansible.builtin.systemd_service:
+        state: restarted
+        daemon_reload: true
+        name: ssh

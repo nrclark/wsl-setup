@@ -1,0 +1,124 @@
+---
+- name: Hello World Playbook
+  hosts: all
+  tasks:
+    - name: Configure systemd with WSL-specific patches
+      block:
+        - name: Set systemd default target to multi-user.target
+          command: systemctl set-default multi-user.target
+          changed_when: "'Created symlink' in command_result.stdout"
+          register: command_result
+
+        - name: Create WSL Keepalive Service
+          copy:
+            dest: /etc/systemd/system/wsl-keepalive.service
+            content: |
+              [Unit]
+              Description=WSL Keepalive
+              
+              [Service]
+              ExecStart=/mnt/c/Windows/System32/waitfor.exe KeepaliveWSL
+              Restart=always
+              RestartSec=3
+              
+              [Install]
+              WantedBy=multi-user.target
+            owner: root
+            group: root
+            mode: '0644'
+            notify:
+               - reload systemd
+
+        - name: Fix Systemd user-runtime service
+          copy:
+            dest: /etc/systemd/system/user-runtime-dir@.service.d/override.conf
+            content: |
+              [Service]
+              ExecStartPost=chown -R %i:%i /run/user/%i
+            owner: root
+            group: root
+            mode: '0644'
+            notify:
+               - reload systemd
+
+        - name: Enable and start WSL Keepalive Service
+          systemd:
+            name: wsl-keepalive.service
+            enabled: yes
+            state: started
+            daemon_reload: yes
+            masked: no
+
+        - name: Disable WSL-incompatible services
+          systemd:
+            name: "{{item}}.service"
+            enabled: no
+            state: stopped
+            masked: yes
+          loop: [systemd-networkd-wait-online, systemd-remount-fs]
+
+        - name: Enable systemd in the WSL config file (/etc/wsl.conf)
+          community.general.ini_file:
+            path: /etc/wsl.conf
+            section: boot
+            option: systemd
+            value: "true"
+            backup: true
+        
+    - name: Install and configure Docker
+      block:
+        - name: Install Docker
+          apt: name={{item}} state=present update_cache=false
+          loop: [docker, docker-compose, docker-buildx]
+
+        - name: Enable Docker
+          ansible.builtin.systemd_service:
+            name: docker
+            state: started
+            enabled: true
+            masked: no
+
+    - name: Install and configure sshd
+      block:
+        - name: Install SSH packages
+          apt: name={{item}} state=present update_cache=false
+          loop: [openssh-server, openssh-client]
+
+        - name: Install common SSH host keys
+          block:
+           - name: Install public host keys
+             ansible.builtin.copy:
+               src: "ssh_keys/{{item}}.pub"
+               dest: /etc/ssh/
+               mode: '0644'
+             loop: [ssh_host_dsa_key, ssh_host_ecdsa_key,
+                      ssh_host_ed25519_key, ssh_host_rsa_key]
+
+           - name: Install private host keys
+             ansible.builtin.copy:
+               src: "ssh_keys/{{item}}"
+               dest: /etc/ssh/
+               mode: '0600'
+             loop: [ssh_host_dsa_key, ssh_host_ecdsa_key,
+                      ssh_host_ed25519_key, ssh_host_rsa_key]
+
+        - name: Enable sshd
+          ansible.builtin.systemd_service:
+            name: ssh
+            state: started
+            enabled: true
+            masked: no
+
+        - name: Ensure PasswordAuthentication is set to yes
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            regexp: '^#?PasswordAuthentication'
+            line: 'PasswordAuthentication yes'
+            validate: /usr/sbin/sshd -t -f %s
+          notify:
+            - restart ssh
+
+  handlers:
+    - name: reload systemd
+      systemd:
+        daemon_reload: yes

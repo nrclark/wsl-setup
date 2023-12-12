@@ -40,3 +40,24 @@ $(VENV_DIR)/bin/activate:
 
 clean::
 	rm -rf $(VENV_DIR)
+
+#-----------------------------------------------------------------------------#
+
+SSH_KEY_TYPES := dsa ecdsa ed25519 rsa
+ALL_KEYFILES := $(foreach x,$(SSH_KEY_TYPES),ssh_host_$(x)_key)
+ALL_KEYFILES += $(foreach x,$(SSH_KEY_TYPES),ssh_host_$(x)_key.pub)
+
+$(foreach x,$(ALL_KEYFILES) id_rsa id_rsa.pub,ssh_keys/$(x)): .keys_generated;
+keys: $(foreach x,$(ALL_KEYFILES) id_rsa id_rsa.pub,ssh_keys/$(x))
+.INTERMEDIATE: .keys_generated
+.keys_generated:
+	rm -rf key.tmp
+	mkdir -p ssh_keys/
+	mkdir -p key.tmp/etc/ssh
+	ssh-keygen -A -f key.tmp
+	cp $(foreach x,$(ALL_KEYFILES),key.tmp/etc/ssh/$(x)) ssh_keys/
+	rm -rf key.tmp/
+	yes | ssh-keygen -C dat3-swint@bosch.com -t rsa -b 4096 -f ssh_keys/id_rsa -N ''
+	touch $@
+
+

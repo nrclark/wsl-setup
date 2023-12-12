@@ -4,10 +4,14 @@
   tasks:
     - name: Configure systemd with WSL-specific patches
       block:
+        - name: Check the current default systemd target
+          ansible.builtin.shell: systemctl get-default
+          register: current_target
+          changed_when: false
+
         - name: Set systemd default target to multi-user.target
           command: systemctl set-default multi-user.target
-          changed_when: "'Created symlink' in command_result.stdout"
-          register: command_result
+          when: current_target.stdout != "multi-user.target"
 
         - name: Create WSL Keepalive Service
           copy:

@@ -2,7 +2,99 @@
 - name: Hello World Playbook
   hosts: all
   tasks:
-    - name: Print Hello World
-      debug:
-        msg: "Hello World"
+    - name: Install Docker
+      apt: name={{item}} state=present update_cache=false
+      loop: [docker, docker-compose, docker-buildx]
 
+    - name: Enable Docker
+      ansible.builtin.systemd_service:
+        name: docker
+        state: started
+        enabled: true
+        masked: no
+
+    - name: Install SSH packages
+      apt: name={{item}} state=present update_cache=false
+      loop: [openssh-server, openssh-client]
+
+    - name: Enable sshd
+      ansible.builtin.systemd_service:
+        name: ssh
+        state: started
+        enabled: true
+        masked: no
+
+    - name: Ensure PasswordAuthentication is set to yes
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PasswordAuthentication'
+        line: 'PasswordAuthentication yes'
+        validate: /usr/sbin/sshd -t -f %s
+      notify:
+        - restart ssh
+
+    - name: Set systemd default target to multi-user.target
+      command: systemctl set-default multi-user.target
+      changed_when: "'Created symlink' in command_result.stdout"
+      register: command_result
+
+    - name: Create WSL Keepalive Service
+      copy:
+        dest: /etc/systemd/system/wsl-keepalive.service
+        content: |
+          [Unit]
+          Description=WSL Keepalive
+          
+          [Service]
+          ExecStart=/mnt/c/Windows/System32/waitfor.exe KeepaliveWSL
+          Restart=always
+          RestartSec=3
+          
+          [Install]
+          WantedBy=multi-user.target
+        owner: root
+        group: root
+        mode: '0644'
+        notify:
+           - reload systemd
+
+    - name: Fix Systemd user-runtime service
+      copy:
+        dest: /etc/systemd/system/user-runtime-dir@.service.d/override.conf
+        content: |
+          [Service]
+          ExecStartPost=chown -R %i:%i /run/user/%i
+        owner: root
+        group: root
+        mode: '0644'
+        notify:
+           - reload systemd
+
+    - name: Enable and start WSL Keepalive Service
+      systemd:
+        name: wsl-keepalive.service
+        enabled: yes
+        state: started
+        daemon_reload: yes
+        masked: no
+
+    - name: Disable WSL-incompatible services
+      systemd:
+        name: "{{item}}.service"
+        enabled: no
+        state: stopped
+        masked: yes
+      loop: [systemd-networkd-wait-online, systemd-remount-fs]
+
+    - name: Enable systemd in the WSL config file (/etc/wsl.conf)
+      community.general.ini_file:
+        path: /etc/wsl.conf
+        section: boot
+        option: systemd
+        value: "true"
+        backup: true
+
+  handlers:
+    - name: reload systemd
+      systemd:
+        daemon_reload: yes

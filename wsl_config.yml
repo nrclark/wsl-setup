@@ -1,4 +1,3 @@
----
 - name: WSL Configuration Playbook
   hosts: all
   become: true
@@ -6,36 +5,30 @@
     - name: Configure systemd with WSL-specific patches
       block:
         - name: Check the current default systemd target
-          ansible.builtin.shell: systemctl get-default
           register: current_target
           changed_when: false
+          ansible.builtin.command:
+            cmd: systemctl get-default # noqa: command-instead-of-module
 
         - name: Set systemd default target to multi-user.target
-          command: systemctl set-default multi-user.target
           when: current_target.stdout != "multi-user.target"
+          ansible.builtin.command:
+            cmd: systemctl set-default multi-user.target # noqa: no-changed-when
 
         - name: Create WSL Keepalive Service
-          copy:
-            dest: /etc/systemd/system/wsl-keepalive.service
-            content: |
-              [Unit]
-              Description=WSL Keepalive
-              
-              [Service]
-              ExecStart=/mnt/c/Windows/System32/waitfor.exe KeepaliveWSL
-              Restart=always
-              RestartSec=3
-              
-              [Install]
-              WantedBy=multi-user.target
+          notify:
+            - reload systemd
+          ansible.builtin.copy:
+            src: wsl-keepalive.service
+            dest: /etc/systemd/system/
             owner: root
             group: root
             mode: '0644'
-            notify:
-               - reload systemd
 
         - name: Fix Systemd user-runtime service
-          copy:
+          notify:
+            - reload systemd
+          ansible.builtin.copy:
             dest: /etc/systemd/system/user-runtime-dir@.service.d/override.conf
             content: |
               [Service]
@@ -43,93 +36,109 @@
             owner: root
             group: root
             mode: '0644'
-            notify:
-               - reload systemd
 
         - name: Enable and start WSL Keepalive Service
-          systemd:
+          ansible.builtin.systemd:
             name: wsl-keepalive.service
-            enabled: yes
+            enabled: 'yes'
             state: started
-            masked: no
+            masked: 'no'
 
         - name: Disable WSL-incompatible services
-          systemd:
-            name: "{{item}}.service"
-            enabled: no
+          ansible.builtin.systemd:
+            name: '{{ item }}.service'
+            enabled: 'no'
             state: stopped
-            masked: yes
-          loop: [systemd-networkd-wait-online, systemd-remount-fs]
+            masked: 'yes'
+          loop:
+            - systemd-networkd-wait-online
+            - systemd-remount-fs
 
         - name: Enable systemd in the WSL config file (/etc/wsl.conf)
           community.general.ini_file:
             path: /etc/wsl.conf
             section: boot
             option: systemd
-            value: "true"
+            value: 'true'
             backup: true
-        
+            mode: '0644'
+
     - name: Install and configure Docker
       block:
         - name: Install Docker
-          apt: name={{item}} state=present update_cache=false
-          loop: [docker, docker-compose, docker-buildx]
+          ansible.builtin.apt:
+            name:
+              - docker
+              - docker-compose
+              - docker-buildx
+            state: present
+            update_cache: false
 
         - name: Enable Docker
           ansible.builtin.systemd_service:
             name: docker
             state: started
             enabled: true
-            masked: no
+            masked: 'no'
 
     - name: Install and configure sshd
       block:
         - name: Install SSH packages
-          apt: name={{item}} state=present update_cache=false
-          loop: [openssh-server, openssh-client]
+          ansible.builtin.apt:
+            name:
+              - openssh-server
+              - openssh-client
+            state: present
+            update_cache: false
 
         - name: Install common SSH host keys
           block:
-           - name: Install public host keys
-             ansible.builtin.copy:
-               force: false
-               src: "ssh_keys/{{item}}.pub"
-               dest: /etc/ssh/
-               mode: '0644'
-             loop: [ssh_host_dsa_key, ssh_host_ecdsa_key,
-                      ssh_host_ed25519_key, ssh_host_rsa_key]
+            - name: Install public host keys
+              ansible.builtin.copy:
+                force: false
+                src: 'ssh_keys/{{ item }}.pub'
+                dest: /etc/ssh/
+                mode: '0644'
+              loop:
+                - ssh_host_dsa_key
+                - ssh_host_ecdsa_key
+                - ssh_host_ed25519_key
+                - ssh_host_rsa_key
 
-           - name: Install private host keys
-             ansible.builtin.copy:
-               force: false
-               src: "ssh_keys/{{item}}"
-               dest: /etc/ssh/
-               mode: '0600'
-             loop: [ssh_host_dsa_key, ssh_host_ecdsa_key,
-                      ssh_host_ed25519_key, ssh_host_rsa_key]
+            - name: Install private host keys
+              ansible.builtin.copy:
+                force: false
+                src: 'ssh_keys/{{ item }}'
+                dest: /etc/ssh/
+                mode: '0600'
+              loop:
+                - ssh_host_dsa_key
+                - ssh_host_ecdsa_key
+                - ssh_host_ed25519_key
+                - ssh_host_rsa_key
 
         - name: Enable sshd
           ansible.builtin.systemd_service:
             name: ssh
             state: started
             enabled: true
-            masked: no
+            masked: 'no'
 
         - name: Ensure PasswordAuthentication is set to yes
-          lineinfile:
+          ansible.builtin.lineinfile:
             path: /etc/ssh/sshd_config
             regexp: '^#?PasswordAuthentication'
-            line: 'PasswordAuthentication yes'
+            line: PasswordAuthentication yes
             validate: /usr/sbin/sshd -t -f %s
           notify:
             - restart ssh
 
   handlers:
-    - name: reload systemd
-      systemd:
-        daemon_reload: yes
+    - name: Reload systemd
+      ansible.builtin.systemd_service:
+        daemon_reload: true
 
-    - name: restart ssh
+    - name: Restart ssh
       ansible.builtin.systemd_service:
         state: restarted
         daemon_reload: true

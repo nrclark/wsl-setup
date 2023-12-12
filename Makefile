@@ -33,6 +33,7 @@ ansible-doc ansible-playbook ansible: $(VENV_DIR)/bin/ansible
 clean::
 	rm -f ansible
 	rm -f ansible-playbook
+	rm -f ansible-doc
 
 shell: SHELL := /bin/bash
 shell: $(VENV_DIR)/bin/activate
@@ -46,6 +47,7 @@ shell: $(VENV_DIR)/bin/activate
 	$(SHELL) --rcfile <(cat ~/.bashrc; echo "PS1=\"$(NEW_PS1) \"") || exit 0
 
 $(VENV_DIR)/bin/activate:
+	rm -rf $(VENV_DIR)
 	python3 -m venv $(VENV_DIR)
 
 clean::

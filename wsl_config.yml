@@ -1,5 +1,5 @@
 ---
-- name: Hello World Playbook
+- name: WSL Configuration Playbook
   hosts: all
   tasks:
     - name: Configure systemd with WSL-specific patches

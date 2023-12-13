@@ -2,6 +2,33 @@
   hosts: all
   become: true
   tasks:
+    - name: Update APT Cache
+      ansible.builtin.apt:
+        update_cache: true
+
+    - name: Update update-manager
+      ansible.builtin.apt:
+        state: latest  # noqa: package-latest
+        force_apt_get: true
+        name: update-manager-core
+        allow_change_held_packages: true
+        autoremove: true
+        purge: true
+
+    - name: Purge snapd
+      ansible.builtin.apt:
+        state: absent
+        purge: true
+        name: snapd
+
+    - name: Upgrade the OS (apt-get dist-upgrade)
+      ansible.builtin.apt:
+        upgrade: dist
+        allow_change_held_packages: true
+        autoremove: true
+        autoclean: true
+        purge: true
+
     - name: Configure systemd with WSL-specific patches
       block:
         - name: Check the current default systemd target
@@ -17,7 +44,7 @@
 
         - name: Create WSL Keepalive Service
           notify:
-            - reload systemd
+            - Reload systemd
           ansible.builtin.copy:
             src: wsl-keepalive.service
             dest: /etc/systemd/system/
@@ -27,12 +54,10 @@
 
         - name: Fix Systemd user-runtime service
           notify:
-            - reload systemd
+            - Reload systemd
           ansible.builtin.copy:
-            dest: /etc/systemd/system/user-runtime-dir@.service.d/override.conf
-            content: |
-              [Service]
-              ExecStartPost=chown -R %i:%i /run/user/%i
+            src: override.conf
+            dest: /etc/systemd/system/user-runtime-dir@.service.d/
             owner: root
             group: root
             mode: '0644'
@@ -131,7 +156,44 @@
             line: PasswordAuthentication yes
             validate: /usr/sbin/sshd -t -f %s
           notify:
-            - restart ssh
+            - Restart ssh
+
+    - name: Configure dat3 user
+      block:
+        - name: Create dat3 user-group
+          ansible.builtin.group:
+            name: dat3
+            state: present
+
+        - name: Create dat3 user
+          ansible.builtin.user:
+            name: dat3
+            group: dat3
+            create_home: true
+            append: true
+            groups:
+              - docker
+              - sudo
+              - dialout
+              - adm
+            password: "$6$BfWvj0eKjGhAnbqu$LatOw3X2kfV3clhoXxqBdWDwX/R8lo4.ybpNjd5xwxJo2nMj26VumfMMd3SKGnGoMgB/U8a9.nlSIYAaOPMUE/"
+            generate_ssh_key: true
+
+        - name: Install SSH private key for dat3 user
+          ansible.builtin.copy:
+            src: ssh_keys/id_rsa
+            dest: /home/dat3/.ssh/id_rsa
+            owner: dat3
+            group: dat3
+            mode: '0600'
+
+        - name: Install SSH public key for dat3 user
+          ansible.builtin.copy:
+            src: ssh_keys/id_rsa.pub
+            dest: /home/dat3/.ssh/id_rsa.pub
+            owner: dat3
+            group: dat3
+            mode: '0644'
 
   handlers:
     - name: Reload systemd

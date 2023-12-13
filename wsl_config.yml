@@ -1,6 +1,5 @@
 - name: WSL Configuration Playbook
   hosts: all
-  become: true
   tasks:
     - name: Update APT Cache
       ansible.builtin.apt:
@@ -142,21 +141,19 @@
                 - ssh_host_ed25519_key
                 - ssh_host_rsa_key
 
-        - name: Enable sshd
-          ansible.builtin.systemd_service:
-            name: ssh
-            state: started
-            enabled: true
-            masked: 'no'
-
         - name: Ensure PasswordAuthentication is set to yes
           ansible.builtin.lineinfile:
             path: /etc/ssh/sshd_config
             regexp: '^#?PasswordAuthentication'
             line: PasswordAuthentication yes
             validate: /usr/sbin/sshd -t -f %s
-          notify:
-            - Restart ssh
+
+        - name: Enable and restart sshd
+          ansible.builtin.systemd_service:
+            name: ssh
+            state: restarted
+            enabled: true
+            masked: false
 
     - name: Configure dat3 user
       block:

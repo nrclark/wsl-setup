@@ -80,4 +80,6 @@ regen-keys:
 #-----------------------------------------------------------------------------#
 run-wsl_config:
 run-%: %.yml hosts.ini ansible-playbook
-	./ansible-playbook --ask-become-pass -i $(filter %.ini,$^) $<
+	./ansible-playbook -i $(filter %.ini,$^) $<
+
+#	./ansible-playbook --ask-become-pass -i $(filter %.ini,$^) $<

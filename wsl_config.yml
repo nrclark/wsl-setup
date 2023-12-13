@@ -14,19 +14,54 @@
         autoremove: true
         purge: true
 
-    - name: Purge snapd
-      ansible.builtin.apt:
-        state: absent
-        purge: true
-        name: snapd
+    - name: Remove unwanted packages
+      block:
+        - name: Install ubuntu-minimal
+          ansible.builtin.apt:
+            name:
+              - aptitude
+              - ubuntu-minimal
+            state: present
+            update_cache: false
 
-    - name: Upgrade the OS (apt-get dist-upgrade)
+        - name: Mark non-minimal packages for removal
+          ansible.builtin.command:
+            argv: 
+             - aptitude
+             - markauto
+             - "~i!~nubuntu-minimal"
+
+        - name: Switch to core WSL
+          ansible.builtin.apt:
+            name:
+              - ubuntu-wsl
+            state: present
+            autoremove: true
+            purge: true
+            install_recommends: false
+            update_cache: false
+
+        - name: Upgrade the OS (apt-get dist-upgrade)
+          ansible.builtin.apt:
+            upgrade: dist
+            allow_change_held_packages: true
+            autoremove: true
+            autoclean: true
+            purge: true
+
+        - name: Remove any straggler packages
+          ansible.builtin.apt:
+            autoremove: true
+            purge: true
+            update_cache: false
+
+    - name: Install other misc packages
       ansible.builtin.apt:
-        upgrade: dist
-        allow_change_held_packages: true
-        autoremove: true
-        autoclean: true
-        purge: true
+        name:
+          - bash-completion
+          - bc
+        state: present
+        update_cache: false
 
     - name: Configure systemd with WSL-specific patches
       block:
@@ -166,7 +201,9 @@
           ansible.builtin.user:
             name: dat3
             group: dat3
+            shell: /bin/bash
             create_home: true
+            skeleton: /etc/skel
             append: true
             groups:
               - docker
@@ -191,6 +228,31 @@
             owner: dat3
             group: dat3
             mode: '0644'
+
+    - name: Configure root user
+      block:
+        - name: Set root's password
+          ansible.builtin.user:
+            name: root
+            password: $6$cosmonaut$7zm9Mwnb.1CzPXw0krVuqaKT.H1gepiFpF/buCXgbu71pGLoP2NT0UHU4Im9fg900JzakgO8qWDc12UbuRo5U0
+
+        - name: Install SSH private key for dat3 user
+          ansible.builtin.copy:
+            src: ssh_keys/id_rsa
+            dest: /home/dat3/.ssh/id_rsa
+            owner: dat3
+            group: dat3
+            mode: '0600'
+
+        - name: Install SSH public key for dat3 user
+          ansible.builtin.copy:
+            src: ssh_keys/id_rsa.pub
+            dest: /home/dat3/.ssh/id_rsa.pub
+            owner: dat3
+            group: dat3
+            mode: '0644'
+
+
 
   handlers:
     - name: Reload systemd

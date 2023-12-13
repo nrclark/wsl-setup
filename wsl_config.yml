@@ -45,9 +45,9 @@
           ansible.builtin.apt:
             upgrade: dist
             allow_change_held_packages: true
-            autoremove: true
             autoclean: true
             purge: true
+            update_cache: true
 
         - name: Remove any straggler packages
           ansible.builtin.apt:
@@ -60,6 +60,8 @@
         name:
           - bash-completion
           - bc
+          - git
+          - make
         state: present
         update_cache: false
 

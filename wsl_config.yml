@@ -49,6 +49,16 @@
             purge: true
             update_cache: true
 
+        - name: Remove a few undesired packages
+          ansible.builtin.apt:
+            name:
+             - snapd
+             - motd-news-config
+            state: absent
+            autoremove: true
+            purge: true
+            update_cache: false
+
         - name: Remove any straggler packages
           ansible.builtin.apt:
             autoremove: true

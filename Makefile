@@ -63,12 +63,11 @@ $(foreach x,$(ALL_KEYFILES) id_rsa id_rsa.pub,ssh_keys/$(x)): .keys_generated;
 keys: $(foreach x,$(ALL_KEYFILES) id_rsa id_rsa.pub,ssh_keys/$(x))
 .INTERMEDIATE: .keys_generated
 .keys_generated:
-	rm -rf key.tmp
 	mkdir -p ssh_keys/
-	mkdir -p key.tmp/etc/ssh
-	ssh-keygen -A -f key.tmp
-	cp $(foreach x,$(ALL_KEYFILES),key.tmp/etc/ssh/$(x)) ssh_keys/
-	rm -rf key.tmp/
+	yes | ssh-keygen -t rsa -b 4096 -f ssh_keys/ssh_host_rsa_key -N ''
+	yes | ssh-keygen -t dsa -b 1024 -f ssh_keys/ssh_host_dsa_key -N ''
+	yes | ssh-keygen -t ecdsa -b 521 -f ssh_keys/ssh_host_ecdsa_key -N ''
+	yes | ssh-keygen -t ed25519 -f ssh_keys/ssh_host_ed25519_key -N ''
 	yes | ssh-keygen -C dat3-swint@bosch.com -t rsa -b 4096 -f ssh_keys/id_rsa -N ''
 	touch $@
 

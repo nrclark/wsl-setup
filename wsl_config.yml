@@ -166,7 +166,7 @@
           block:
             - name: Install public host keys
               ansible.builtin.copy:
-                force: false
+                force: true
                 src: 'ssh_keys/{{ item }}.pub'
                 dest: /etc/ssh/
                 mode: '0644'
@@ -178,7 +178,7 @@
 
             - name: Install private host keys
               ansible.builtin.copy:
-                force: false
+                force: true
                 src: 'ssh_keys/{{ item }}'
                 dest: /etc/ssh/
                 mode: '0600'
@@ -193,7 +193,6 @@
             path: /etc/ssh/sshd_config
             regexp: '^#?PasswordAuthentication'
             line: PasswordAuthentication yes
-            validate: /usr/sbin/sshd -t -f %s
 
         - name: Enable and restart sshd
           ansible.builtin.systemd_service:

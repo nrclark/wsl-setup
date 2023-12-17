@@ -125,6 +125,12 @@ try {
     WslStop
     WslWrap --manage $target_distro --set-sparse true
     WslWrap -utf8 -d $target_distro sh -c "echo WSL Booted OK"
+
+    $ubuntu_mirror = "https://mirrors.edge.kernel.org/ubuntu/pool"
+    $cntlm_url = "$ubuntu_mirror/universe/c/cntlm/cntlm_0.92.3-1.2_amd64.deb"
+    $cntlm_deb = $cntlm_url -replace ".*/",""
+
+    Invoke-WebRequest -Uri "$cntlm_url" -OutFile "$cntlm_deb"
     Write-Host "Copying config folder to WSL installation."
     Copy-Item -Recurse (pwd) -Destination "\\wsl.localhost\$target_distro\root"
 

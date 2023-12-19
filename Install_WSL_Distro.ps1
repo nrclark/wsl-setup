@@ -25,12 +25,12 @@ function WslWrap
 
     $wslOutput = wsl @Args
     $exit_ok = $?
-    [Console]::OutputEncoding = $encoding 
+    [Console]::OutputEncoding = $encoding
 
     if ($exit_ok -or $nocheck) {
         return ,@($wslOutput)
     }
-    
+
     Write-Error ($wslOutput -join "`r`n")
     $errorMsg = "WSL command failed with arguments: $Args.`nExit Code: $LASTEXITCODE"
     throw $errorMsg
@@ -44,7 +44,7 @@ function WslDistroInstalled
         [Parameter(Position=0, Mandatory=$true)]
         [string] $Distro
     )
- 
+
     $wslOutput = WslWrap -nocheck --list
     $escapedDistro = [regex]::Escape($Distro)
 
@@ -75,7 +75,7 @@ function WslCheckActive
 
             if ($line -match "(?i)^$escapedDistro( .*$|$)") {
                 return $true
-            }        
+            }
         }
 
         return $false
@@ -98,7 +98,7 @@ function WslStop
         } else {
             wsl --shutdown
         }
-    
+
         Start-Sleep -Seconds 0.25
     }
 
@@ -149,7 +149,7 @@ try {
     Write-Host $_
     Read-Host -Prompt "Press Enter to exit"
     throw $_
-} 
+}
 
 Read-Host -Prompt "Press Enter to exit"
 exit

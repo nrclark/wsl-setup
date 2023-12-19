@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 #------------------------------------------------------------------------------#
 
 function CheckElevated
-{  
+{
     $user = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = (New-Object Security.Principal.WindowsPrincipal $user)
     $admin_role = [Security.Principal.WindowsBuiltinRole]::Administrator
@@ -29,8 +29,8 @@ if (-not (CheckElevated)) {
     Write-Host "Admin permissions are necessary to run this script."
     Write-Host "Relaunching as administrator."
 
-    $cmd_args=@("-NoProfile", "-NonInteractive", 
-                "-ExecutionPolicy", "bypass", "-File", 
+    $cmd_args=@("-NoProfile", "-NonInteractive",
+                "-ExecutionPolicy", "bypass", "-File",
                 $MyInvocation.MyCommand.Path, "-ElevatedInstall")
 
     Start-Process -FilePath "powershell.exe" -Verb RunAs `
@@ -56,6 +56,6 @@ try {
     Write-Host $_
     Read-Host -Prompt "Press Enter to exit"
     throw $_
-} 
+}
 
 

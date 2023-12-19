@@ -1,3 +1,4 @@
  - Fix keygen generation. The generated keys from these steps don't seem to work with sshd for some reason.
  - Fix error-detection for failed WSL calls in ps1 script. Right now, Ansible can fail and the script will
    still report a success.
+ - proxy values don't pass through to sudo yet

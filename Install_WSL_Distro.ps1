@@ -45,7 +45,7 @@ function WslDistroInstalled
         [string] $Distro
     )
  
-    $wslOutput = WslWrap --list
+    $wslOutput = WslWrap -nocheck --list
     $escapedDistro = [regex]::Escape($Distro)
 
     foreach ($line in $wslOutput) {
@@ -112,7 +112,7 @@ $installer = "ubuntu2204"
 try {
     Write-Host (WslWrap --set-default-version 2)
     Write-Host (WslWrap --update --web-download)
-    Write-Host (WslWrap --install $target_distro --web-download --no-launch)
+    wsl --install $target_distro --web-download --no-launch
 
     if (WslDistroInstalled $target_distro) {
         Write-Host "Removing previous $target_distro installation."
@@ -129,14 +129,19 @@ try {
     $ubuntu_mirror = "https://mirrors.edge.kernel.org/ubuntu/pool"
     $cntlm_url = "$ubuntu_mirror/universe/c/cntlm/cntlm_0.92.3-1.2_amd64.deb"
     $cntlm_deb = $cntlm_url -replace ".*/",""
+    $proxy = ([System.Net.WebRequest]::GetSystemWebproxy()).GetProxy($cntlm_url)
+    Invoke-WebRequest $cntlm_url -Proxy $proxy -ProxyUseDefaultCredentials  -OutFile "$cntlm_deb"
 
-    Invoke-WebRequest -Uri "$cntlm_url" -OutFile "$cntlm_deb"
     Write-Host "Copying config folder to WSL installation."
     Copy-Item -Recurse (pwd) -Destination "\\wsl.localhost\$target_distro\root"
 
-    wsl -d $target_distro -u root apt update
-    wsl -d $target_distro -u root apt install -y make git python3-venv
-    wsl -d $target_distro -u root sh -c "cd /root && make -C wsl-setup run-wsl_config"
+    wsl -d $target_distro -u root chmod 0755 /root/wsl-setup/install-cntlm.sh
+    wsl -d $target_distro -u root /root/wsl-setup/install-cntlm.sh `
+        -p 5F3FA80FA924D4C6FF37D8BB6B297460 `
+        install /root/wsl-setup/cntlm_0.92.3-1.2_amd64.deb
+    wsl -d $target_distro -u root sh -l -c "apt update"
+    wsl -d $target_distro -u root sh -l -c "apt install -y make git python3-venv"
+    wsl -d $target_distro -u root sh -l -c "cd /root && make -C wsl-setup run-wsl_config"
     Write-Host "WSL installation configured OK. Script is complete."
 } catch {
     Write-Host "-----------"

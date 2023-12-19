@@ -31,6 +31,14 @@
              - markauto
              - "~i!~nubuntu-minimal"
 
+        - name: Make sure CNTLM stays installed
+          ansible.builtin.apt:
+            name:
+              - cntlm
+            state: present
+            autoremove: false
+            update_cache: false
+
         - name: Switch to core WSL
           ansible.builtin.apt:
             name:

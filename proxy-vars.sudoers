@@ -1,0 +1,5 @@
+Defaults env_keep += "FTP_PROXY ftp_proxy"
+Defaults env_keep += "HTTPS_PROXY https_proxy"
+Defaults env_keep += "HTTP_PROXY http_proxy"
+Defaults env_keep += "NO_PROXY no_proxy"
+Defaults env_keep += "SOCKS_PROXY socks_proxy"

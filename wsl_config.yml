@@ -62,6 +62,7 @@
             name:
              - snapd
              - motd-news-config
+             - unattended-upgrades
             state: absent
             autoremove: true
             purge: true
@@ -271,6 +272,13 @@
             group: root
             mode: '0644'
 
+    - name: Add proxy passthru to sudo
+      ansible.builtin.copy:
+        src: proxy-vars.sudoers
+        dest: /etc/sudoers.d/
+        owner: root
+        group: root
+        mode: '0444'
 
 
   handlers:

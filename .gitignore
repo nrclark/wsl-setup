@@ -1,3 +1,4 @@
 ansible
 ansible-playbook
+*.deb
 venv/

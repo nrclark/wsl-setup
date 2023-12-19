@@ -275,10 +275,10 @@
     - name: Add proxy passthru to sudo
       ansible.builtin.copy:
         src: proxy-vars.sudoers
-        dest: /etc/sudoers.d/
+        dest: /etc/sudoers.d/proxy-vars
         owner: root
         group: root
-        mode: '0444'
+        mode: '0440'
 
 
   handlers:

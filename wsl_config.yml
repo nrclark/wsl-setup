@@ -177,7 +177,7 @@
                 force: true
                 src: 'ssh_keys/{{ item }}.pub'
                 dest: /etc/ssh/
-                mode: '0644'
+                mode: '0444'
               loop:
                 - ssh_host_dsa_key
                 - ssh_host_ecdsa_key
@@ -189,7 +189,7 @@
                 force: true
                 src: 'ssh_keys/{{ item }}'
                 dest: /etc/ssh/
-                mode: '0600'
+                mode: '0400'
               loop:
                 - ssh_host_dsa_key
                 - ssh_host_ecdsa_key
@@ -235,7 +235,7 @@
         - name: Install SSH private key for dat3 user
           ansible.builtin.copy:
             src: ssh_keys/id_rsa
-            dest: /home/dat3/.ssh/id_rsa
+            dest: /home/dat3/.ssh/
             owner: dat3
             group: dat3
             mode: '0600'
@@ -243,7 +243,7 @@
         - name: Install SSH public key for dat3 user
           ansible.builtin.copy:
             src: ssh_keys/id_rsa.pub
-            dest: /home/dat3/.ssh/id_rsa.pub
+            dest: /home/dat3/.ssh/
             owner: dat3
             group: dat3
             mode: '0644'
@@ -255,20 +255,20 @@
             name: root
             password: $6$cosmonaut$7zm9Mwnb.1CzPXw0krVuqaKT.H1gepiFpF/buCXgbu71pGLoP2NT0UHU4Im9fg900JzakgO8qWDc12UbuRo5U0
 
-        - name: Install SSH private key for dat3 user
+        - name: Install SSH private key for root user
           ansible.builtin.copy:
             src: ssh_keys/id_rsa
-            dest: /home/dat3/.ssh/id_rsa
-            owner: dat3
-            group: dat3
+            dest: /root/.ssh/
+            owner: root
+            group: root
             mode: '0600'
 
-        - name: Install SSH public key for dat3 user
+        - name: Install SSH public key for root user
           ansible.builtin.copy:
             src: ssh_keys/id_rsa.pub
-            dest: /home/dat3/.ssh/id_rsa.pub
-            owner: dat3
-            group: dat3
+            dest: /root/.ssh/
+            owner: root
+            group: root
             mode: '0644'
 
 

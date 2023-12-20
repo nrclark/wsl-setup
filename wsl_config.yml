@@ -81,6 +81,8 @@
           - bc
           - git
           - make
+          - tmux
+          - screen
         state: present
         update_cache: false
 
@@ -160,6 +162,21 @@
             state: started
             enabled: true
             masked: 'no'
+
+        - name: Install Docker proxy settings
+          ansible.builtin.copy:
+            force: true
+            src: http-proxy.conf
+            dest: /etc/systemd/system/docker.service.d/
+            mode: '0644'
+          notify:
+            - Reload systemd
+
+        - name: Restart Docker
+          ansible.builtin.systemd_service:
+            name: docker
+            state: restarted
+            daemon_reload: true
 
     - name: Install and configure sshd
       block:
